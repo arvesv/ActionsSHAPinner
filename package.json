@@ -1,24 +1,57 @@
 {
   "name": "actionsshapinner",
   "version": "1.0.0",
-  "description": "A tool that adds SHA to GitHub Actions",
-  "main": "dist/index.js",
+  "description": "CLI and library for pinning GitHub Actions uses: references to full commit SHAs.",
+  "type": "commonjs",
+  "main": "dist/lib.js",
+  "types": "dist/lib.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib.d.ts",
+      "require": "./dist/lib.js",
+      "default": "./dist/lib.js"
+    },
+    "./package.json": "./package.json"
+  },
   "bin": {
     "sha-pinner": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm test",
     "test": "jest",
     "start": "ts-node src/index.ts"
   },
   "keywords": [
     "github-actions",
     "security",
-    "sha",
-    "pinning"
+    "pinning",
+    "supply-chain-security",
+    "cli",
+    "yaml"
   ],
-  "author": "",
-  "license": "GPL-2.0",
+  "author": "arvesv",
+  "license": "GPL-2.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arvesv/ActionsSHAPinner.git"
+  },
+  "bugs": {
+    "url": "https://github.com/arvesv/ActionsSHAPinner/issues"
+  },
+  "homepage": "https://github.com/arvesv/ActionsSHAPinner#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
