@@ -1,6 +1,6 @@
 # ActionsSHAPinner
 
-A CLI tool that pins GitHub Actions `uses:` references to their full commit SHA, improving the security of your workflows by preventing tag mutation attacks.
+A publishable npm package that provides both a CLI and a small library for pinning GitHub Actions `uses:` references to full commit SHAs.
 
 Inspired by [this tweet](https://x.com/acolombiadev/status/2038990002609078399).
 
@@ -18,6 +18,10 @@ Tags in GitHub Actions (like `@v3`) are mutable — a maintainer (or attacker) c
 - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v3
 ```
 
+## Requirements
+
+- Node.js 20 or newer
+
 ## Installation
 
 ```bash
@@ -28,6 +32,12 @@ Or run directly with `npx`:
 
 ```bash
 npx actionsshapinner <workflow-file>
+```
+
+Or add it as a dependency:
+
+```bash
+npm install actionsshapinner
 ```
 
 ## Usage
@@ -68,6 +78,19 @@ sha-pinner --token $GITHUB_TOKEN .github/workflows/ci.yml
 GITHUB_TOKEN=<token> sha-pinner .github/workflows/ci.yml
 ```
 
+## Library usage
+
+```ts
+import { pinWorkflowContent } from "actionsshapinner";
+
+const result = await pinWorkflowContent(`
+steps:
+  - uses: actions/checkout@v4
+`);
+
+console.log(result.content);
+```
+
 ## Behaviour
 
 - **Remote actions** (`uses: owner/repo@ref`) are pinned to their commit SHA. The original ref is preserved as an inline comment.
@@ -84,3 +107,11 @@ npm install
 npm run build   # compile TypeScript
 npm test        # run tests
 ```
+
+## Publishing
+
+```bash
+npm publish
+```
+
+The published package contains only `dist`, `README.md`, and `LICENSE`.
