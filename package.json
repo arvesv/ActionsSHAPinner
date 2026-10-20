@@ -1,6 +1,6 @@
 {
   "name": "actionsshapinner",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI and library for pinning GitHub Actions uses: references to full commit SHAs.",
   "type": "commonjs",
   "main": "dist/lib.js",
