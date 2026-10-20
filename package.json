@@ -25,6 +25,7 @@
     "build": "tsc -p tsconfig.build.json",
     "prepack": "npm run build",
     "prepublishOnly": "npm test",
+    "release": "node scripts/bump-version.js",
     "test": "jest",
     "start": "ts-node src/index.ts"
   },

@@ -46,17 +46,26 @@ npm install actionsshapinner
 sha-pinner [options] <files...>
 
 Arguments:
-  files                GitHub Actions workflow YAML file(s) to pin
+  files                  GitHub Actions workflow YAML file(s) to pin (or 'version')
 
 Options:
-  -V, --version        output the version number
-  -t, --token <token>  GitHub personal access token (or set GITHUB_TOKEN env var)
-  --dry-run            Print the updated content to stdout instead of writing files
-  --no-fail-on-error   Skip actions that cannot be resolved instead of failing
-  -h, --help           display help for command
+  -V, --version          output the version number
+  -v, --version-details  display version details and repository links
+  -t, --token <token>    GitHub personal access token (or set GITHUB_TOKEN env var)
+  --dry-run              Print the updated content to stdout instead of writing files
+  --no-fail-on-error     Skip actions that cannot be resolved instead of failing
+  -h, --help             display help for command
 ```
 
 ### Examples
+
+Display version and repository links:
+
+```bash
+sha-pinner version
+# or
+sha-pinner -v
+```
 
 Pin all actions in a single workflow file:
 
@@ -108,10 +117,22 @@ npm run build   # compile TypeScript
 npm test        # run tests
 ```
 
-## Publishing
+## Publishing & Release Pipeline
+
+Releases are automated via GitHub Actions inspired by the [Nexus](https://github.com/arvesv/Nexus) project:
+
+- **Manual Trigger**: Run the `Release` workflow (`.github/workflows/release.yml`) via `workflow_dispatch` with a bump type (`patch`, `minor`, `major`, or `custom`).
+- **Automated Steps**:
+  - Validates build and test suite.
+  - Bumps version in `package.json` and updates `src/build-info.json`.
+  - Commits version update and pushes tag (`vX.Y.Z`).
+  - Updates the `latest` release branch (`refs/heads/latest`).
+  - Generates GitHub Release with automated release notes.
+
+To bump version locally:
 
 ```bash
-npm publish
+npm run release [patch|minor|major|<version>]
 ```
 
-The published package contains only `dist`, `README.md`, and `LICENSE`.
+The published npm package contains only `dist`, `README.md`, and `LICENSE`.
