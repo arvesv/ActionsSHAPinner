@@ -25,6 +25,9 @@ function runCli(
 
 describe("CLI (sha-pinner)", () => {
   let tmpDir: string;
+  const pkgVersion: string = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "../../package.json"), "utf8"),
+  ).version;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sha-pinner-cli-test-"));
@@ -37,15 +40,15 @@ describe("CLI (sha-pinner)", () => {
   it("outputs version with --version", async () => {
     const { stdout, exitCode } = await runCli(["--version"]);
     expect(exitCode).toBe(0);
-    expect(stdout.trim()).toBe("1.0.0");
+    expect(stdout.trim()).toBe(pkgVersion);
   });
 
   it("outputs version details and links with version argument", async () => {
     const { stdout, exitCode } = await runCli(["version"]);
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("sha-pinner 1.0.0");
+    expect(stdout).toContain(`sha-pinner ${pkgVersion}`);
     expect(stdout).toContain("Repository:     https://github.com/arvesv/ActionsSHAPinner");
-    expect(stdout).toContain("Release:        https://github.com/arvesv/ActionsSHAPinner/releases/tag/v1.0.0");
+    expect(stdout).toContain(`Release:        https://github.com/arvesv/ActionsSHAPinner/releases/tag/v${pkgVersion}`);
     expect(stdout).toContain("Commit:         https://github.com/arvesv/ActionsSHAPinner/commit/");
     expect(stdout).toContain("Release Branch: https://github.com/arvesv/ActionsSHAPinner/tree/");
   });
@@ -53,7 +56,7 @@ describe("CLI (sha-pinner)", () => {
   it("outputs version details and links with -v flag", async () => {
     const { stdout, exitCode } = await runCli(["-v"]);
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("sha-pinner 1.0.0");
+    expect(stdout).toContain(`sha-pinner ${pkgVersion}`);
     expect(stdout).toContain("Repository:     https://github.com/arvesv/ActionsSHAPinner");
   });
 
