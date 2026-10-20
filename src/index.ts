@@ -26,8 +26,6 @@ program
   .action(async (files: string[], opts: { token?: string; dryRun: boolean; failOnError: boolean }) => {
     const token = opts.token ?? process.env["GITHUB_TOKEN"];
 
-    let hasError = false;
-
     for (const file of files) {
       const filePath = path.resolve(file);
 
@@ -49,7 +47,6 @@ program
                   console.warn(
                     `  Warning: Could not resolve ${action}@${ref}: ${err.message}`,
                   );
-                  hasError = true;
                 },
           },
         );
@@ -74,10 +71,6 @@ program
         console.error(`Error processing ${file}: ${message}`);
         process.exit(1);
       }
-    }
-
-    if (hasError) {
-      process.exit(1);
     }
   });
 

@@ -243,4 +243,80 @@ steps:
       "uses: actions/checkout@aaa1111111111111111111111111111111111111  # main",
     );
   });
+
+  it("handles double-quoted actions", async () => {
+    mockResolveRefToSha.mockResolvedValue(
+      "111222333444555666777888999000aaabbbccc1",
+    );
+
+    const input = `
+steps:
+  - uses: "actions/checkout@v4"
+`;
+
+    const { content, results } = await pinWorkflowContent(input);
+
+    expect(content).toContain(
+      'uses: "actions/checkout@111222333444555666777888999000aaabbbccc1"  # v4',
+    );
+    expect(results).toHaveLength(1);
+    expect(results[0].action).toBe("actions/checkout");
+  });
+
+  it("handles single-quoted actions", async () => {
+    mockResolveRefToSha.mockResolvedValue(
+      "222333444555666777888999000aaabbbcccddd2",
+    );
+
+    const input = `
+steps:
+  - uses: 'actions/checkout@v4'
+`;
+
+    const { content, results } = await pinWorkflowContent(input);
+
+    expect(content).toContain(
+      "uses: 'actions/checkout@222333444555666777888999000aaabbbcccddd2'  # v4",
+    );
+    expect(results).toHaveLength(1);
+    expect(results[0].action).toBe("actions/checkout");
+  });
+
+  it("ignores uses: strings inside multiline run blocks", async () => {
+    mockResolveRefToSha.mockResolvedValue(
+      "333444555666777888999000aaabbbcccdddeee3",
+    );
+
+    const input = `
+steps:
+  - name: Run script with echo
+    run: |
+      echo "Example:"
+      uses: fake/script@v1
+  - name: Real step
+    uses: actions/checkout@v4
+`;
+
+    const { content, results } = await pinWorkflowContent(input);
+
+    // fake/script should not have been touched
+    expect(content).toContain('      uses: fake/script@v1');
+    expect(content).toContain(
+      "uses: actions/checkout@333444555666777888999000aaabbbcccdddeee3  # v4",
+    );
+    expect(results).toHaveLength(1);
+    expect(results[0].action).toBe("actions/checkout");
+  });
+
+  it("preserves CRLF line endings", async () => {
+    mockResolveRefToSha.mockResolvedValue(
+      "444555666777888999000aaabbbcccdddeeefff4",
+    );
+
+    const input = "steps:\r\n  - uses: actions/checkout@v4\r\n";
+    const { content } = await pinWorkflowContent(input);
+
+    expect(content).toContain("\r\n");
+    expect(content).not.toMatch(/[^\r]\n/);
+  });
 });

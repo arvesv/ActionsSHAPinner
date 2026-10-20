@@ -17,20 +17,29 @@ async function fetchGitHub(
   token?: string,
 ): Promise<Record<string, unknown>> {
   const headers: Record<string, string> = {
-    Accept: "application/vnd.github.v3+json",
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
     "User-Agent": "ActionsSHAPinner/1.0",
   };
   if (token) {
-    headers["Authorization"] = `token ${token}`;
+    headers["Authorization"] =
+      token.startsWith("Bearer ") || token.startsWith("token ")
+        ? token
+        : `Bearer ${token}`;
   }
 
   const response = await fetch(url, { headers });
 
   if (!response.ok) {
-    throw new GitHubApiError(
-      `GitHub API error: ${response.status} ${response.statusText} for ${url}`,
-      response.status,
-    );
+    let message = `GitHub API error: ${response.status} ${response.statusText} for ${url}`;
+    const rateLimitRemaining = response.headers?.get?.("x-ratelimit-remaining");
+    if (
+      (response.status === 403 || response.status === 429) &&
+      rateLimitRemaining === "0"
+    ) {
+      message += " (rate limit exceeded; consider providing a GITHUB_TOKEN)";
+    }
+    throw new GitHubApiError(message, response.status);
   }
 
   return response.json() as Promise<Record<string, unknown>>;

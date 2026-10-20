@@ -2,16 +2,21 @@ import { resolveRefToSha, GitHubApiOptions } from "./github-api";
 
 /**
  * Matches `uses: owner/repo@ref` or `uses: owner/repo/sub/path@ref` in YAML.
+ * Supports both unquoted and quoted action references (e.g. `uses: "actions/checkout@v4"`).
  *
  * Capture groups:
- *   1 – leading whitespace before "uses:"
- *   2 – owner
- *   3 – repo (including any sub-path, e.g. "actions/aws-credentials/sub")
- *   4 – ref (tag, branch, or SHA)
- *   5 – optional existing inline comment (e.g. "  # v3")
+ *   1 – leading whitespace before "uses:" (and dash if present)
+ *   2 – optional opening quote (", ', or empty)
+ *   3 – owner
+ *   4 – repo (including any sub-path, e.g. "actions/aws-credentials/sub")
+ *   5 – ref (tag, branch, or SHA)
+ *   6 – optional existing inline comment (e.g. "  # v3")
  */
-const USES_REGEX =
-  /^(\s*-?\s*uses:\s+)([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_./-]+)@([^\s#]+)((?:\s+#.*)?)$/gm;
+const USES_LINE_REGEX =
+  /^(\s*-?\s*uses:\s+)(['"]?)([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_./-]+)@([^\s#'"]+)\2((?:\s+#.*)?)$/;
+
+/** Regex matching YAML block scalar indicators (e.g. `run: |`, `run: >-`, `- run: |`). */
+const BLOCK_SCALAR_HEADER_REGEX = /:\s*[|>][+-]?[0-9]?(?:\s+#.*)?$/;
 
 /** A SHA that is already 40 hex characters – considered already pinned. */
 const FULL_SHA_REGEX = /^[0-9a-f]{40}$/i;
@@ -47,28 +52,58 @@ export async function pinWorkflowContent(
   options: PinOptions = {},
 ): Promise<{ content: string; results: PinResult[] }> {
   const results: PinResult[] = [];
+  const eol = content.includes("\r\n") ? "\r\n" : "\n";
+  const lines = content.split(/\r?\n/);
 
-  // Collect all matches first so we can resolve SHAs in parallel
-  const matches: {
-    fullMatch: string;
+  interface MatchInfo {
+    lineIndex: number;
     prefix: string;
+    quote: string;
     owner: string;
     repoPath: string;
     ref: string;
     existingComment: string;
-  }[] = [];
+  }
 
-  let m: RegExpExecArray | null;
-  const regex = new RegExp(USES_REGEX.source, USES_REGEX.flags);
-  while ((m = regex.exec(content)) !== null) {
-    matches.push({
-      fullMatch: m[0],
-      prefix: m[1],
-      owner: m[2],
-      repoPath: m[3],
-      ref: m[4],
-      existingComment: m[5],
-    });
+  const matches: MatchInfo[] = [];
+
+  let blockScalarIndent: number | null = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (blockScalarIndent !== null) {
+      if (line.trim().length === 0) {
+        // Blank lines inside a block scalar are preserved as part of the block
+        continue;
+      }
+      const lineIndent = (line.match(/^(\s*)/)?.[1] ?? "").length;
+      if (lineIndent > blockScalarIndent) {
+        // Still inside multiline block scalar (e.g., shell script in `run: |`)
+        continue;
+      }
+      // Block scalar has ended
+      blockScalarIndent = null;
+    }
+
+    if (BLOCK_SCALAR_HEADER_REGEX.test(line)) {
+      const keyCol = line.match(/^(\s*(?:-\s+)?)/)?.[0].length ?? 0;
+      blockScalarIndent = keyCol;
+      continue;
+    }
+
+    const m = USES_LINE_REGEX.exec(line);
+    if (m) {
+      matches.push({
+        lineIndex: i,
+        prefix: m[1],
+        quote: m[2],
+        owner: m[3],
+        repoPath: m[4],
+        ref: m[5],
+        existingComment: m[6],
+      });
+    }
   }
 
   // Resolve SHAs in parallel
@@ -100,21 +135,13 @@ export async function pinWorkflowContent(
     }),
   );
 
-  // Build replacement map (fullMatch → newLine)
-  const replacements = new Map<string, string>();
+  // Apply replacements directly by line index
   for (let i = 0; i < matches.length; i++) {
     const r = resolved[i];
     if (!r) continue;
-    const { fullMatch, prefix, owner, repoPath, ref } = matches[i];
-    const newLine = `${prefix}${owner}/${repoPath}@${r.sha}  # ${ref}`;
-    replacements.set(fullMatch, newLine);
+    const { lineIndex, prefix, quote, owner, repoPath, ref } = matches[i];
+    lines[lineIndex] = `${prefix}${quote}${owner}/${repoPath}@${r.sha}${quote}  # ${ref}`;
   }
 
-  // Apply replacements (preserve original line endings)
-  let output = content;
-  for (const [original, replacement] of replacements) {
-    output = output.split(original).join(replacement);
-  }
-
-  return { content: output, results };
+  return { content: lines.join(eol), results };
 }

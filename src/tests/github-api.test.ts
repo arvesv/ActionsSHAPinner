@@ -7,11 +7,15 @@ global.fetch = mockFetch;
 function makeResponse(
   data: unknown,
   status = 200,
+  headers: Record<string, string> = {},
 ): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
-    statusText: status === 200 ? "OK" : "Not Found",
+    statusText: status === 200 ? "OK" : status === 403 ? "Forbidden" : "Not Found",
+    headers: {
+      get: (headerName: string) => headers[headerName.toLowerCase()] ?? null,
+    },
     json: async () => data,
   } as unknown as Response;
 }
@@ -99,7 +103,7 @@ describe("resolveRefToSha", () => {
     ).rejects.toThrow(GitHubApiError);
   });
 
-  it("passes Authorization header when token is provided", async () => {
+  it("passes Bearer Authorization header when token is provided", async () => {
     const sha = "abc123def456abc123def456abc123def456abc1";
     mockFetch.mockResolvedValue(
       makeResponse({
@@ -113,10 +117,48 @@ describe("resolveRefToSha", () => {
       expect.any(String),
       expect.objectContaining({
         headers: expect.objectContaining({
-          Authorization: "token mytoken",
+          Authorization: "Bearer mytoken",
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
         }),
       }),
     );
+  });
+
+  it("preserves explicit token prefix in Authorization header", async () => {
+    const sha = "abc123def456abc123def456abc123def456abc1";
+    mockFetch.mockResolvedValue(
+      makeResponse({
+        object: { sha, type: "commit" },
+      }),
+    );
+
+    await resolveRefToSha("actions", "checkout", "v3", {
+      token: "token custom_token",
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "token custom_token",
+        }),
+      }),
+    );
+  });
+
+  it("provides informative message when rate limit is exceeded", async () => {
+    mockFetch.mockResolvedValue(
+      makeResponse(
+        { message: "API rate limit exceeded" },
+        403,
+        { "x-ratelimit-remaining": "0" },
+      ),
+    );
+
+    await expect(
+      resolveRefToSha("actions", "checkout", "v3"),
+    ).rejects.toThrow(/rate limit exceeded; consider providing a GITHUB_TOKEN/);
   });
 
   it("re-throws non-404 API errors", async () => {
