@@ -40,6 +40,23 @@ describe("CLI (sha-pinner)", () => {
     expect(stdout.trim()).toBe("1.0.0");
   });
 
+  it("outputs version details and links with version argument", async () => {
+    const { stdout, exitCode } = await runCli(["version"]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("sha-pinner 1.0.0");
+    expect(stdout).toContain("Repository:     https://github.com/arvesv/ActionsSHAPinner");
+    expect(stdout).toContain("Release:        https://github.com/arvesv/ActionsSHAPinner/releases/tag/v1.0.0");
+    expect(stdout).toContain("Commit:         https://github.com/arvesv/ActionsSHAPinner/commit/");
+    expect(stdout).toContain("Release Branch: https://github.com/arvesv/ActionsSHAPinner/tree/");
+  });
+
+  it("outputs version details and links with -v flag", async () => {
+    const { stdout, exitCode } = await runCli(["-v"]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("sha-pinner 1.0.0");
+    expect(stdout).toContain("Repository:     https://github.com/arvesv/ActionsSHAPinner");
+  });
+
   it("outputs help with --help", async () => {
     const { stdout, exitCode } = await runCli(["--help"]);
     expect(exitCode).toBe(0);
