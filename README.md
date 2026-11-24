@@ -1,5 +1,10 @@
 # ActionsSHAPinner
 
+> [!WARNING]
+> **This repository has been sunsetted and is no longer maintained.**
+>
+> Please use [github/gh-actions-lock](https://github.com/github/gh-actions-lock) instead.
+
 A publishable npm package that provides both a CLI and a small library for pinning GitHub Actions `uses:` references to full commit SHAs.
 
 Inspired by [this tweet](https://x.com/acolombiadev/status/2038990002609078399).
